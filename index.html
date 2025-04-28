@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grabador de Dibujos</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            text-align: center;
+            background-color: #f5f5f5;
+        }
+        h1 {
+            color: #333;
+        }
+        #canvas-container {
+            position: relative;
+            margin: 20px auto;
+            border: 2px solid #333;
+            border-radius: 8px;
+            background-color: white;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        canvas {
+            display: block;
+            cursor: crosshair;
+        }
+        .controls {
+            margin: 20px auto;
+            max-width: 600px;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+        }
+        button {
+            padding: 10px 15px;
+            font-size: 16px;
+            cursor: pointer;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        #recordBtn {
+            background-color: #f44336;
+        }
+        #recordBtn:hover {
+            background-color: #d32f2f;
+        }
+        #recordBtn.recording {
+            animation: pulse 1s infinite;
+        }
+        @keyframes pulse {
+            0% { background-color: #f44336; }
+            50% { background-color: #d32f2f; }
+            100% { background-color: #f44336; }
+        }
+        #downloadBtn {
+            background-color: #2196F3;
+        }
+        #downloadBtn:hover {
+            background-color: #0b7dda;
+        }
+        #clearBtn {
+            background-color: #ff9800;
+        }
+        #clearBtn:hover {
+            background-color: #e68a00;
+        }
+        #status {
+            margin-top: 10px;
+            font-weight: bold;
+            height: 20px;
+        }
+        .recording-indicator {
+            display: none;
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background-color: red;
+            animation: pulse 1s infinite;
+        }
+        #instructions {
+            margin: 20px auto;
+            max-width: 600px;
+            text-align: left;
+            background-color: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        #instructions h3 {
+            margin-top: 0;
+        }
+        #instructions ul {
+            padding-left: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Grabador de Dibujos</h1>
+    
+    <div id="canvas-container">
+        <canvas id="drawingCanvas" width="600" height="400"></canvas>
+        <div id="recordingIndicator" class="recording-indicator"></div>
+    </div>
+    
+    <div id="status"></div>
+    
+    <div class="controls">
+        <button id="recordBtn">Iniciar Grabación</button>
+        <button id="playBtn" disabled>Reproducir</button>
+        <button id="downloadBtn" disabled>Exportar Dibujo</button>
+        <button id="clearBtn">Limpiar</button>
+    </div>
+    
+    <div id="instructions">
+        <h3>Instrucciones:</h3>
+        <ul>
+            <li><strong>Iniciar Grabación:</strong> Presiona el botón para comenzar a grabar tus movimientos.</li>
+            <li><strong>Dibujar:</strong> Haz clic y arrastra para dibujar en el lienzo.</li>
+            <li><strong>Detener Grabación:</strong> Presiona nuevamente el botón para detener la grabación.</li>
+            <li><strong>Reproducir:</strong> Visualiza tu dibujo reproduciéndose automáticamente.</li>
+            <li><strong>Exportar:</strong> Descarga un archivo JSON con tus movimientos para usarlo en Python.</li>
+            <li><strong>Limpiar:</strong> Borra el dibujo y comienza de nuevo.</li>
+        </ul>
+        <p><strong>Nota:</strong> Los dibujos exportados son compatibles con el programa Python "Bot de Dibujo".</p>
+    </div>
+    
+    <script>
+        // Elementos del DOM
+        const canvas = document.getElementById('drawingCanvas');
+        const ctx = canvas.getContext('2d');
+        const recordBtn = document.getElementById('recordBtn');
+        const playBtn = document.getElementById('playBtn');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const statusEl = document.getElementById('status');
+        const recordingIndicator = document.getElementById('recordingIndicator');
+        
+        // Estado de la aplicación
+        let isDrawing = false;
+        let isRecording = false;
+        let lastX = 0;
+        let lastY = 0;
+        let movements = [];
+        let startTime = 0;
+        
+        // Inicializar canvas
+        ctx.lineJoin = 'round';
+        ctx.lineCap = 'round';
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = 'black';
+        
+        // Limpiar canvas
+        function clearCanvas() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            statusEl.textContent = "Lienzo limpiado";
+            
+            // Si no estamos grabando, reiniciar también los movimientos
+            if (!isRecording) {
+                movements = [];
+                playBtn.disabled = true;
+                downloadBtn.disabled = true;
+            }
+        }
+        
+        // Iniciar dibujo
+        function startDrawing(e) {
+            isDrawing = true;
+            
+            // Obtener coordenadas relativas al canvas
+            const rect = canvas.getBoundingClientRect();
+            lastX = e.clientX - rect.left;
+            lastY = e.clientY - rect.top;
+            
+            // Registrar movimiento si estamos grabando
+            if (isRecording) {
+                const currentTime = Date.now() - startTime;
+                movements.push({
+                    tiempo: currentTime / 1000, // Convertir a segundos
+                    posicion: [lastX, lastY],
+                    presionado: true
+                });
+            }
+        }
+        
+        // Dibujar
+        function draw(e) {
+            if (!isDrawing) return;
+            
+            // Obtener coordenadas actuales
+            const rect = canvas.getBoundingClientRect();
+            const currentX = e.clientX - rect.left;
+            const currentY = e.clientY - rect.top;
+            
+            // Dibujar línea
+            ctx.beginPath();
+            ctx.moveTo(lastX, lastY);
+            ctx.lineTo(currentX, currentY);
+            ctx.stroke();
+            
+            // Actualizar última posición
+            lastX = currentX;
+            lastY = currentY;
+            
+            // Registrar movimiento si estamos grabando
+            if (isRecording) {
+                const currentTime = Date.now() - startTime;
+                movements.push({
+                    tiempo: currentTime / 1000, // Convertir a segundos
+                    posicion: [currentX, currentY],
+                    presionado: true
+                });
+            }
+        }
+        
+        // Detener dibujo
+        function stopDrawing() {
+            if (isDrawing) {
+                isDrawing = false;
+                
+                // Registrar que se soltó el botón
+                if (isRecording) {
+                    const currentTime = Date.now() - startTime;
+                    movements.push({
+                        tiempo: currentTime / 1000, // Convertir a segundos
+                        posicion: [lastX, lastY],
+                        presionado: false,
+                        soltar: true
+                    });
+                }
+            }
+        }
+        
+        // Iniciar/Detener grabación
+        function toggleRecording() {
+            if (!isRecording) {
+                // Iniciar grabación
+                isRecording = true;
+                startTime = Date.now();
+                movements = [];
+                
+                // Actualizar UI
+                recordBtn.textContent = "Detener Grabación";
+                recordBtn.classList.add("recording");
+                recordingIndicator.style.display = "block";
+                statusEl.textContent = "Grabando...";
+                
+                // Deshabilitar reproducción durante grabación
+                playBtn.disabled = true;
+                downloadBtn.disabled = true;
+            } else {
+                // Detener grabación
+                isRecording = false;
+                
+                // Actualizar UI
+                recordBtn.textContent = "Iniciar Grabación";
+                recordBtn.classList.remove("recording");
+                recordingIndicator.style.display = "none";
+                statusEl.textContent = `Grabación completada: ${movements.length} movimientos registrados`;
+                
+                // Habilitar reproducción y descarga
+                playBtn.disabled = false;
+                downloadBtn.disabled = false;
+            }
+        }
+        
+        // Reproducir dibujo
+        function playDrawing() {
+            if (movements.length === 0) return;
+            
+            // Limpiar canvas
+            clearCanvas();
+            statusEl.textContent = "Reproduciendo...";
+            
+            // Deshabilitar botones durante reproducción
+            recordBtn.disabled = true;
+            playBtn.disabled = true;
+            downloadBtn.disabled = true;
+            clearBtn.disabled = true;
+            
+            let lastPos = null;
+            let isPressed = false;
+            let playbackStartTime = Date.now();
+            
+            function animateDrawing() {
+                const currentPlaybackTime = (Date.now() - playbackStartTime) / 1000;
+                
+                // Encontrar todos los movimientos hasta el tiempo actual
+                let currentIndex = 0;
+                while (currentIndex < movements.length && movements[currentIndex].tiempo <= currentPlaybackTime) {
+                    const move = movements[currentIndex];
+                    
+                    // Si cambia el estado de presionado
+                    if (isPressed !== move.presionado) {
+                        isPressed = move.presionado;
+                        if (!isPressed) {
+                            lastPos = null; // Reiniciar último punto al soltar
+                        }
+                    }
+                    
+                    // Dibujar si está presionado y hay un punto anterior
+                    if (isPressed && lastPos) {
+                        ctx.beginPath();
+                        ctx.moveTo(lastPos[0], lastPos[1]);
+                        ctx.lineTo(move.posicion[0], move.posicion[1]);
+                        ctx.stroke();
+                    }
+                    
+                    // Actualizar último punto
+                    lastPos = move.posicion;
+                    currentIndex++;
+                }
+                
+                // Si aún quedan movimientos, continuar animación
+                if (currentIndex < movements.length) {
+                    requestAnimationFrame(animateDrawing);
+                } else {
+                    // Finalizar reproducción
+                    statusEl.textContent = "Reproducción completada";
+                    
+                    // Habilitar botones
+                    recordBtn.disabled = false;
+                    playBtn.disabled = false;
+                    downloadBtn.disabled = false;
+                    clearBtn.disabled = false;
+                }
+            }
+            
+            // Iniciar animación
+            requestAnimationFrame(animateDrawing);
+        }
+        
+        // Exportar dibujo como JSON
+        function exportDrawing() {
+            if (movements.length === 0) {
+                statusEl.textContent = "No hay dibujo para exportar";
+                return;
+            }
+            
+            // Convertir a formato compatible con Python
+            const pythonCompatible = movements.map(move => {
+                return {
+                    tiempo: move.tiempo,
+                    posicion: [
+                        Math.round(move.posicion[0]), 
+                        Math.round(move.posicion[1])
+                    ],
+                    presionado: move.presionado,
+                    ...(move.soltar && { soltar: true })
+                };
+            });
+            
+            // Crear blob de JSON
+            const jsonData = JSON.stringify(pythonCompatible, null, 2);
+            const blob = new Blob([jsonData], { type: 'application/json' });
+            
+            // Crear enlace de descarga
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'dibujo_web.json';
+            
+            // Descargar archivo
+            document.body.appendChild(a);
+            a.click();
+            
+            // Limpiar
+            setTimeout(() => {
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            }, 100);
+            
+            statusEl.textContent = "Dibujo exportado como dibujo_web.json";
+        }
+        
+        // Event Listeners
+        canvas.addEventListener('mousedown', startDrawing);
+        canvas.addEventListener('mousemove', draw);
+        canvas.addEventListener('mouseup', stopDrawing);
+        canvas.addEventListener('mouseout', stopDrawing);
+        
+        recordBtn.addEventListener('click', toggleRecording);
+        playBtn.addEventListener('click', playDrawing);
+        downloadBtn.addEventListener('click', exportDrawing);
+        clearBtn.addEventListener('click', clearCanvas);
+        
+        // Evitar que se muestre el menú contextual en el canvas
+        canvas.addEventListener('contextmenu', e => e.preventDefault());
+        
+        // Mensaje inicial
+        statusEl.textContent = "Listo para dibujar";
+    </script>
+</body>
+</html>
