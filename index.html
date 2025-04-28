@@ -27,6 +27,7 @@
         canvas {
             display: block;
             cursor: crosshair;
+            touch-action: none; /* Previene el desplazamiento en móviles */
         }
         .controls {
             margin: 20px auto;
@@ -133,7 +134,7 @@
         <h3>Instrucciones:</h3>
         <ul>
             <li><strong>Iniciar Grabación:</strong> Presiona el botón para comenzar a grabar tus movimientos.</li>
-            <li><strong>Dibujar:</strong> Haz clic y arrastra para dibujar en el lienzo.</li>
+            <li><strong>Dibujar:</strong> Haz clic y arrastra (o toca y desliza en móviles) para dibujar en el lienzo.</li>
             <li><strong>Detener Grabación:</strong> Presiona nuevamente el botón para detener la grabación.</li>
             <li><strong>Reproducir:</strong> Visualiza tu dibujo reproduciéndose automáticamente.</li>
             <li><strong>Exportar:</strong> Descarga un archivo JSON con tus movimientos para usarlo en Python.</li>
@@ -167,6 +168,29 @@
         ctx.lineWidth = 2;
         ctx.strokeStyle = 'black';
         
+        // Ajustar tamaño del canvas al cargar
+        function resizeCanvas() {
+            const container = document.getElementById('canvas-container');
+            const containerWidth = container.clientWidth;
+            const canvasWidth = Math.min(600, containerWidth - 4); // -4 para el borde
+            
+            // Mantener relación de aspecto
+            const canvasHeight = canvasWidth * (400/600);
+            
+            canvas.width = canvasWidth;
+            canvas.height = canvasHeight;
+            
+            // Reiniciar configuración
+            ctx.lineJoin = 'round';
+            ctx.lineCap = 'round';
+            ctx.lineWidth = 2;
+            ctx.strokeStyle = 'black';
+        }
+        
+        // Llamar al resize al cargar
+        window.addEventListener('load', resizeCanvas);
+        window.addEventListener('resize', resizeCanvas);
+        
         // Limpiar canvas
         function clearCanvas() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -180,7 +204,7 @@
             }
         }
         
-        // Iniciar dibujo
+        // Iniciar dibujo (mouse)
         function startDrawing(e) {
             isDrawing = true;
             
@@ -200,7 +224,7 @@
             }
         }
         
-        // Dibujar
+        // Dibujar (mouse)
         function draw(e) {
             if (!isDrawing) return;
             
@@ -230,7 +254,7 @@
             }
         }
         
-        // Detener dibujo
+        // Detener dibujo (mouse)
         function stopDrawing() {
             if (isDrawing) {
                 isDrawing = false;
@@ -240,6 +264,77 @@
                     const currentTime = Date.now() - startTime;
                     movements.push({
                         tiempo: currentTime / 1000, // Convertir a segundos
+                        posicion: [lastX, lastY],
+                        presionado: false,
+                        soltar: true
+                    });
+                }
+            }
+        }
+        
+        // Iniciar dibujo (táctil)
+        function handleTouchStart(e) {
+            e.preventDefault();
+            const touch = e.touches[0];
+            const rect = canvas.getBoundingClientRect();
+            
+            isDrawing = true;
+            lastX = touch.clientX - rect.left;
+            lastY = touch.clientY - rect.top;
+            
+            // Registrar movimiento si estamos grabando
+            if (isRecording) {
+                const currentTime = Date.now() - startTime;
+                movements.push({
+                    tiempo: currentTime / 1000,
+                    posicion: [lastX, lastY],
+                    presionado: true
+                });
+            }
+        }
+        
+        // Dibujar (táctil)
+        function handleTouchMove(e) {
+            e.preventDefault();
+            if (!isDrawing) return;
+            
+            const touch = e.touches[0];
+            const rect = canvas.getBoundingClientRect();
+            const currentX = touch.clientX - rect.left;
+            const currentY = touch.clientY - rect.top;
+            
+            // Dibujar línea
+            ctx.beginPath();
+            ctx.moveTo(lastX, lastY);
+            ctx.lineTo(currentX, currentY);
+            ctx.stroke();
+            
+            // Actualizar última posición
+            lastX = currentX;
+            lastY = currentY;
+            
+            // Registrar movimiento si estamos grabando
+            if (isRecording) {
+                const currentTime = Date.now() - startTime;
+                movements.push({
+                    tiempo: currentTime / 1000,
+                    posicion: [currentX, currentY],
+                    presionado: true
+                });
+            }
+        }
+        
+        // Detener dibujo (táctil)
+        function handleTouchEnd(e) {
+            e.preventDefault();
+            if (isDrawing) {
+                isDrawing = false;
+                
+                // Registrar que se soltó el dedo
+                if (isRecording) {
+                    const currentTime = Date.now() - startTime;
+                    movements.push({
+                        tiempo: currentTime / 1000,
                         posicion: [lastX, lastY],
                         presionado: false,
                         soltar: true
@@ -390,11 +485,17 @@
             statusEl.textContent = "Dibujo exportado como dibujo_web.json";
         }
         
-        // Event Listeners
+        // Event Listeners para mouse
         canvas.addEventListener('mousedown', startDrawing);
         canvas.addEventListener('mousemove', draw);
         canvas.addEventListener('mouseup', stopDrawing);
         canvas.addEventListener('mouseout', stopDrawing);
+        
+        // Event Listeners para pantalla táctil
+        canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
+        canvas.addEventListener('touchmove', handleTouchMove, { passive: false });
+        canvas.addEventListener('touchend', handleTouchEnd, { passive: false });
+        canvas.addEventListener('touchcancel', handleTouchEnd, { passive: false });
         
         recordBtn.addEventListener('click', toggleRecording);
         playBtn.addEventListener('click', playDrawing);
