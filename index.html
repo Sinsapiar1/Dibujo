@@ -423,12 +423,62 @@
         let movements = [];
         let startTime = 0;
         
+        // Variable para almacenar la imagen del canvas
+        let canvasSnapshot = null;
+        
+        // Función para guardar el estado actual del canvas
+        function saveCanvasState() {
+            try {
+                canvasSnapshot = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            } catch (e) {
+                console.error("Error al guardar el estado del canvas:", e);
+            }
+        }
+        
+        // Función para restaurar el estado guardado
+        function restoreCanvasState() {
+            if (canvasSnapshot) {
+                try {
+                    // Verificar si las dimensiones coinciden
+                    if (canvasSnapshot.width === canvas.width && canvasSnapshot.height === canvas.height) {
+                        ctx.putImageData(canvasSnapshot, 0, 0);
+                    } else {
+                        // Las dimensiones han cambiado, necesitamos usar un canvas temporal
+                        const tempCanvas = document.createElement('canvas');
+                        tempCanvas.width = canvasSnapshot.width;
+                        tempCanvas.height = canvasSnapshot.height;
+                        const tempCtx = tempCanvas.getContext('2d');
+                        tempCtx.putImageData(canvasSnapshot, 0, 0);
+                        
+                        // Limpiar el canvas actual
+                        ctx.clearRect(0, 0, canvas.width, canvas.height);
+                        
+                        // Dibujar el canvas temporal en el canvas actual con escalado
+                        ctx.drawImage(tempCanvas, 0, 0, canvas.width, canvas.height);
+                    }
+                } catch (e) {
+                    console.error("Error al restaurar el estado del canvas:", e);
+                }
+            }
+        }
+        
         // Establecer tamaño inicial del canvas
         function setCanvasSize() {
+            // Guardar el estado actual antes de cambiar dimensiones
+            if (ctx) {
+                saveCanvasState();
+            }
+            
             const container = document.getElementById('canvas-container');
             canvas.width = container.clientWidth;
             canvas.height = container.clientHeight;
+            
             resetContext();
+            
+            // Restaurar el dibujo después de cambiar dimensiones
+            if (canvasSnapshot) {
+                restoreCanvasState();
+            }
         }
         
         // Restablecer configuración del contexto
@@ -449,7 +499,16 @@
             setCanvasSize();
             
             // Event listeners para redimensionar el canvas
-            window.addEventListener('resize', setCanvasSize);
+            window.addEventListener('resize', function() {
+                // Retrasar ligeramente el cambio de tamaño para evitar problemas
+                setTimeout(setCanvasSize, 100);
+            });
+            
+            // Detector de cambio de orientación
+            window.addEventListener('orientationchange', function() {
+                // Esperar a que termine la transición de orientación
+                setTimeout(setCanvasSize, 300);
+            });
             
             // Mostrar/ocultar instrucciones
             toggleInstructionsBtn.addEventListener('click', () => {
@@ -466,6 +525,9 @@
         function clearCanvas() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             statusEl.textContent = "Lienzo limpiado";
+            
+            // Limpiar la imagen guardada
+            canvasSnapshot = null;
             
             // Si no estamos grabando, reiniciar también los movimientos
             if (!isRecording) {
@@ -533,6 +595,9 @@
             
             if (isDrawing) {
                 isDrawing = false;
+                
+                // Guardar el estado del canvas después de completar el dibujo
+                saveCanvasState();
                 
                 // Registrar que se soltó el botón
                 if (isRecording) {
@@ -605,6 +670,9 @@
             if (isDrawing) {
                 isDrawing = false;
                 
+                // Guardar el estado del canvas después de completar el dibujo
+                saveCanvasState();
+                
                 // Registrar que se soltó el dedo
                 if (isRecording) {
                     const currentTime = Date.now() - startTime;
@@ -655,6 +723,9 @@
         function playDrawing() {
             if (movements.length === 0) return;
             
+            // Guardar el estado actual antes de la reproducción
+            saveCanvasState();
+            
             // Limpiar canvas
             clearCanvas();
             statusEl.textContent = "Reproduciendo...";
@@ -704,6 +775,9 @@
                 } else {
                     // Finalizar reproducción
                     statusEl.textContent = "Reproducción completada";
+                    
+                    // Guardar el estado después de la reproducción
+                    saveCanvasState();
                     
                     // Habilitar botones
                     recordBtn.disabled = false;
