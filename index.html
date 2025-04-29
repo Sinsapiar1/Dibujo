@@ -4,144 +4,403 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Grabador de Dibujos</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        body {
-            font-family: Arial, sans-serif;
+        :root {
+            --primary-color: #3498db;
+            --secondary-color: #2ecc71;
+            --accent-color: #e74c3c;
+            --dark-color: #34495e;
+            --light-color: #f9f9f9;
+            --text-color: #333;
+            --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            --border-radius: 8px;
+            --transition: all 0.3s ease;
+        }
+        
+        * {
             margin: 0;
-            padding: 20px;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--light-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            padding: 0;
+            margin: 0;
+            overflow-x: hidden;
+        }
+        
+        .container {
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 15px;
+        }
+        
+        header {
+            background-color: var(--primary-color);
+            color: white;
             text-align: center;
-            background-color: #f5f5f5;
+            padding: 1rem 0;
+            box-shadow: var(--shadow);
+            position: relative;
         }
-        h1 {
-            color: #333;
+        
+        header h1 {
+            margin: 0;
+            font-size: 1.8rem;
+            font-weight: 500;
         }
+        
+        .toggle-instructions {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: var(--transition);
+        }
+        
+        .toggle-instructions:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+        
         #canvas-container {
             position: relative;
-            margin: 20px auto;
-            border: 2px solid #333;
-            border-radius: 8px;
+            margin: 1rem auto;
+            border-radius: var(--border-radius);
             background-color: white;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            box-shadow: var(--shadow);
             overflow: hidden;
+            width: 100%;
+            max-width: 800px;
+            height: auto;
+            aspect-ratio: 3/2;
         }
+        
         canvas {
             display: block;
+            width: 100%;
+            height: 100%;
             cursor: crosshair;
-            touch-action: none; /* Previene el desplazamiento en móviles */
+            touch-action: none;
         }
-        .controls {
-            margin: 20px auto;
-            max-width: 600px;
+        
+        .toolbar {
             display: flex;
             flex-wrap: wrap;
             justify-content: center;
-            gap: 10px;
+            gap: 0.5rem;
+            margin: 1rem auto;
+            max-width: 600px;
+            position: relative;
         }
-        button {
-            padding: 10px 15px;
-            font-size: 16px;
+        
+        .toolbar-container {
+            position: relative;
+            background-color: white;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            padding: 0.75rem;
+            width: 100%;
+        }
+        
+        .toolbar button {
+            padding: 0.6rem 1rem;
+            background-color: white;
+            color: var(--dark-color);
+            border: 1px solid #ddd;
+            border-radius: var(--border-radius);
             cursor: pointer;
-            background-color: #4CAF50;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            flex-grow: 1;
+            min-width: 100px;
+            font-size: 0.9rem;
+        }
+        
+        .toolbar button i {
+            font-size: 1rem;
+        }
+        
+        .toolbar button:hover {
+            background-color: #f5f5f5;
+        }
+        
+        #recordBtn {
+            background-color: var(--accent-color);
             color: white;
             border: none;
-            border-radius: 4px;
-            transition: background-color 0.3s;
         }
-        button:hover {
-            background-color: #45a049;
-        }
-        button:disabled {
-            background-color: #cccccc;
-            cursor: not-allowed;
-        }
-        #recordBtn {
-            background-color: #f44336;
-        }
+        
         #recordBtn:hover {
-            background-color: #d32f2f;
+            background-color: #c0392b;
         }
+        
         #recordBtn.recording {
             animation: pulse 1s infinite;
         }
+        
         @keyframes pulse {
-            0% { background-color: #f44336; }
-            50% { background-color: #d32f2f; }
-            100% { background-color: #f44336; }
+            0% { background-color: var(--accent-color); }
+            50% { background-color: #c0392b; }
+            100% { background-color: var(--accent-color); }
         }
+        
+        #playBtn {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+        }
+        
+        #playBtn:hover {
+            background-color: #2980b9;
+        }
+        
         #downloadBtn {
-            background-color: #2196F3;
+            background-color: var(--secondary-color);
+            color: white;
+            border: none;
         }
+        
         #downloadBtn:hover {
-            background-color: #0b7dda;
+            background-color: #27ae60;
         }
-        #clearBtn {
-            background-color: #ff9800;
+        
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
         }
-        #clearBtn:hover {
-            background-color: #e68a00;
+        
+        button:disabled:hover {
+            background-color: inherit;
         }
+        
         #status {
-            margin-top: 10px;
-            font-weight: bold;
-            height: 20px;
+            padding: 0.5rem;
+            font-size: 0.9rem;
+            color: var(--dark-color);
+            background-color: rgba(255, 255, 255, 0.8);
+            border-radius: var(--border-radius);
+            margin-top: 0.5rem;
+            text-align: center;
         }
+        
         .recording-indicator {
             display: none;
             position: absolute;
             top: 10px;
             right: 10px;
-            width: 20px;
-            height: 20px;
+            width: 15px;
+            height: 15px;
             border-radius: 50%;
-            background-color: red;
+            background-color: var(--accent-color);
             animation: pulse 1s infinite;
+            z-index: 10;
         }
-        #instructions {
-            margin: 20px auto;
-            max-width: 600px;
-            text-align: left;
+        
+        .instructions {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s ease;
+            margin: 0 auto 1rem;
+            max-width: 800px;
+        }
+        
+        .instructions.open {
+            max-height: 500px;
+        }
+        
+        .instructions-content {
             background-color: white;
-            padding: 15px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            padding: 1.5rem;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            margin-top: 1rem;
         }
-        #instructions h3 {
+        
+        .instructions h3 {
             margin-top: 0;
+            color: var(--dark-color);
+            font-size: 1.2rem;
+            margin-bottom: 1rem;
         }
-        #instructions ul {
-            padding-left: 20px;
+        
+        .instructions ul {
+            padding-left: 1.5rem;
+            margin-bottom: 1rem;
+        }
+        
+        .instructions li {
+            margin-bottom: 0.5rem;
+        }
+        
+        .instructions p {
+            margin-bottom: 0.5rem;
+        }
+        
+        .instructions .note {
+            background-color: #f8f9fa;
+            padding: 0.75rem;
+            border-left: 4px solid var(--primary-color);
+            border-radius: 4px;
+            font-size: 0.9rem;
+        }
+        
+        /* Estilos específicos para móviles */
+        @media (max-width: 768px) {
+            .toolbar {
+                flex-direction: column;
+                width: 100%;
+            }
+            
+            .toolbar-container {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 0.5rem;
+            }
+            
+            #recordBtn {
+                grid-column: 1 / -1;
+            }
+            
+            header h1 {
+                font-size: 1.5rem;
+            }
+            
+            #canvas-container {
+                aspect-ratio: 4/3;
+            }
+        }
+        
+        /* Para dispositivos muy pequeños */
+        @media (max-width: 480px) {
+            .toolbar-container {
+                grid-template-columns: 1fr;
+            }
+            
+            .toolbar button {
+                width: 100%;
+            }
+            
+            header h1 {
+                font-size: 1.3rem;
+            }
+        }
+        
+        .dropdown {
+            position: relative;
+            display: inline-block;
+        }
+        
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            background-color: white;
+            min-width: 160px;
+            box-shadow: var(--shadow);
+            z-index: 100;
+            border-radius: var(--border-radius);
+            top: 100%;
+            left: 0;
+            margin-top: 0.25rem;
+        }
+        
+        .dropdown:hover .dropdown-content,
+        .dropdown:focus-within .dropdown-content {
+            display: block;
+        }
+        
+        .dropdown-content button {
+            display: block;
+            width: 100%;
+            text-align: left;
+            padding: 0.75rem 1rem;
+            border: none;
+            background: none;
+            cursor: pointer;
+            transition: var(--transition);
+            color: var(--text-color);
+        }
+        
+        .dropdown-content button:hover {
+            background-color: #f5f5f5;
+        }
+        
+        footer {
+            text-align: center;
+            padding: 1rem;
+            margin-top: 2rem;
+            font-size: 0.8rem;
+            color: #777;
+            background-color: #f5f5f5;
         }
     </style>
 </head>
 <body>
-    <h1>Grabador de Dibujos</h1>
+    <header>
+        <div class="container">
+            <h1>Grabador de Dibujos</h1>
+            <button class="toggle-instructions" id="toggleInstructions">
+                <i class="fas fa-question"></i>
+            </button>
+        </div>
+    </header>
     
-    <div id="canvas-container">
-        <canvas id="drawingCanvas" width="600" height="400"></canvas>
-        <div id="recordingIndicator" class="recording-indicator"></div>
+    <div class="container">
+        <div class="instructions" id="instructions">
+            <div class="instructions-content">
+                <h3><i class="fas fa-info-circle"></i> Cómo usar esta herramienta</h3>
+                <ul>
+                    <li><strong>Iniciar:</strong> Presiona el botón rojo para comenzar a grabar tus movimientos.</li>
+                    <li><strong>Dibujar:</strong> Haz clic y arrastra (o toca y desliza en móviles) para dibujar en el lienzo.</li>
+                    <li><strong>Detener:</strong> Presiona nuevamente el botón para detener la grabación.</li>
+                    <li><strong>Reproducir:</strong> Visualiza tu dibujo reproduciéndose automáticamente.</li>
+                    <li><strong>Exportar:</strong> Descarga un archivo JSON con tus movimientos para usarlo en Python.</li>
+                    <li><strong>Limpiar:</strong> Borra el dibujo y comienza de nuevo.</li>
+                </ul>
+                <div class="note">
+                    <strong>Nota:</strong> Los dibujos exportados son compatibles con el programa Python "Bot de Dibujo". Ideal para practicar formas y trazos con niños.
+                </div>
+            </div>
+        </div>
+        
+        <div id="canvas-container">
+            <canvas id="drawingCanvas"></canvas>
+            <div id="recordingIndicator" class="recording-indicator"></div>
+        </div>
+        
+        <div class="toolbar">
+            <div class="toolbar-container">
+                <button id="recordBtn"><i class="fas fa-record-vinyl"></i> Iniciar</button>
+                <button id="playBtn" disabled><i class="fas fa-play"></i> Reproducir</button>
+                <button id="downloadBtn" disabled><i class="fas fa-download"></i> Exportar</button>
+                <button id="clearBtn"><i class="fas fa-trash"></i> Limpiar</button>
+            </div>
+            <div id="status">Listo para dibujar</div>
+        </div>
     </div>
     
-    <div id="status"></div>
-    
-    <div class="controls">
-        <button id="recordBtn">Iniciar Grabación</button>
-        <button id="playBtn" disabled>Reproducir</button>
-        <button id="downloadBtn" disabled>Exportar Dibujo</button>
-        <button id="clearBtn">Limpiar</button>
-    </div>
-    
-    <div id="instructions">
-        <h3>Instrucciones:</h3>
-        <ul>
-            <li><strong>Iniciar Grabación:</strong> Presiona el botón para comenzar a grabar tus movimientos.</li>
-            <li><strong>Dibujar:</strong> Haz clic y arrastra (o toca y desliza en móviles) para dibujar en el lienzo.</li>
-            <li><strong>Detener Grabación:</strong> Presiona nuevamente el botón para detener la grabación.</li>
-            <li><strong>Reproducir:</strong> Visualiza tu dibujo reproduciéndose automáticamente.</li>
-            <li><strong>Exportar:</strong> Descarga un archivo JSON con tus movimientos para usarlo en Python.</li>
-            <li><strong>Limpiar:</strong> Borra el dibujo y comienza de nuevo.</li>
-        </ul>
-        <p><strong>Nota:</strong> Los dibujos exportados son compatibles con el programa Python "Bot de Dibujo".</p>
-    </div>
+    <footer>
+        <div class="container">
+            <p>Herramienta de aprendizaje para niños - Grabador de Dibujos © 2025</p>
+        </div>
+    </footer>
     
     <script>
         // Elementos del DOM
@@ -153,6 +412,8 @@
         const clearBtn = document.getElementById('clearBtn');
         const statusEl = document.getElementById('status');
         const recordingIndicator = document.getElementById('recordingIndicator');
+        const toggleInstructionsBtn = document.getElementById('toggleInstructions');
+        const instructionsPanel = document.getElementById('instructions');
         
         // Estado de la aplicación
         let isDrawing = false;
@@ -162,34 +423,44 @@
         let movements = [];
         let startTime = 0;
         
-        // Inicializar canvas
-        ctx.lineJoin = 'round';
-        ctx.lineCap = 'round';
-        ctx.lineWidth = 2;
-        ctx.strokeStyle = 'black';
-        
-        // Ajustar tamaño del canvas al cargar
-        function resizeCanvas() {
+        // Establecer tamaño inicial del canvas
+        function setCanvasSize() {
             const container = document.getElementById('canvas-container');
-            const containerWidth = container.clientWidth;
-            const canvasWidth = Math.min(600, containerWidth - 4); // -4 para el borde
-            
-            // Mantener relación de aspecto
-            const canvasHeight = canvasWidth * (400/600);
-            
-            canvas.width = canvasWidth;
-            canvas.height = canvasHeight;
-            
-            // Reiniciar configuración
+            canvas.width = container.clientWidth;
+            canvas.height = container.clientHeight;
+            resetContext();
+        }
+        
+        // Restablecer configuración del contexto
+        function resetContext() {
             ctx.lineJoin = 'round';
             ctx.lineCap = 'round';
-            ctx.lineWidth = 2;
+            ctx.lineWidth = isMobileDevice() ? 3 : 2; // Línea más gruesa en móviles
             ctx.strokeStyle = 'black';
         }
         
-        // Llamar al resize al cargar
-        window.addEventListener('load', resizeCanvas);
-        window.addEventListener('resize', resizeCanvas);
+        // Detectar si es dispositivo móvil
+        function isMobileDevice() {
+            return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        }
+        
+        // Inicializar
+        function init() {
+            setCanvasSize();
+            
+            // Event listeners para redimensionar el canvas
+            window.addEventListener('resize', setCanvasSize);
+            
+            // Mostrar/ocultar instrucciones
+            toggleInstructionsBtn.addEventListener('click', () => {
+                instructionsPanel.classList.toggle('open');
+            });
+            
+            // Mostrar instrucciones al cargar la página
+            setTimeout(() => {
+                instructionsPanel.classList.add('open');
+            }, 500);
+        }
         
         // Limpiar canvas
         function clearCanvas() {
@@ -206,12 +477,13 @@
         
         // Iniciar dibujo (mouse)
         function startDrawing(e) {
+            e.preventDefault();
             isDrawing = true;
             
             // Obtener coordenadas relativas al canvas
             const rect = canvas.getBoundingClientRect();
-            lastX = e.clientX - rect.left;
-            lastY = e.clientY - rect.top;
+            lastX = (e.clientX - rect.left) * (canvas.width / rect.width);
+            lastY = (e.clientY - rect.top) * (canvas.height / rect.height);
             
             // Registrar movimiento si estamos grabando
             if (isRecording) {
@@ -226,12 +498,13 @@
         
         // Dibujar (mouse)
         function draw(e) {
+            e.preventDefault();
             if (!isDrawing) return;
             
             // Obtener coordenadas actuales
             const rect = canvas.getBoundingClientRect();
-            const currentX = e.clientX - rect.left;
-            const currentY = e.clientY - rect.top;
+            const currentX = (e.clientX - rect.left) * (canvas.width / rect.width);
+            const currentY = (e.clientY - rect.top) * (canvas.height / rect.height);
             
             // Dibujar línea
             ctx.beginPath();
@@ -255,7 +528,9 @@
         }
         
         // Detener dibujo (mouse)
-        function stopDrawing() {
+        function stopDrawing(e) {
+            if (e) e.preventDefault();
+            
             if (isDrawing) {
                 isDrawing = false;
                 
@@ -279,8 +554,8 @@
             const rect = canvas.getBoundingClientRect();
             
             isDrawing = true;
-            lastX = touch.clientX - rect.left;
-            lastY = touch.clientY - rect.top;
+            lastX = (touch.clientX - rect.left) * (canvas.width / rect.width);
+            lastY = (touch.clientY - rect.top) * (canvas.height / rect.height);
             
             // Registrar movimiento si estamos grabando
             if (isRecording) {
@@ -300,8 +575,8 @@
             
             const touch = e.touches[0];
             const rect = canvas.getBoundingClientRect();
-            const currentX = touch.clientX - rect.left;
-            const currentY = touch.clientY - rect.top;
+            const currentX = (touch.clientX - rect.left) * (canvas.width / rect.width);
+            const currentY = (touch.clientY - rect.top) * (canvas.height / rect.height);
             
             // Dibujar línea
             ctx.beginPath();
@@ -352,7 +627,7 @@
                 movements = [];
                 
                 // Actualizar UI
-                recordBtn.textContent = "Detener Grabación";
+                recordBtn.innerHTML = '<i class="fas fa-stop"></i> Detener';
                 recordBtn.classList.add("recording");
                 recordingIndicator.style.display = "block";
                 statusEl.textContent = "Grabando...";
@@ -365,7 +640,7 @@
                 isRecording = false;
                 
                 // Actualizar UI
-                recordBtn.textContent = "Iniciar Grabación";
+                recordBtn.innerHTML = '<i class="fas fa-record-vinyl"></i> Iniciar';
                 recordBtn.classList.remove("recording");
                 recordingIndicator.style.display = "none";
                 statusEl.textContent = `Grabación completada: ${movements.length} movimientos registrados`;
@@ -497,6 +772,7 @@
         canvas.addEventListener('touchend', handleTouchEnd, { passive: false });
         canvas.addEventListener('touchcancel', handleTouchEnd, { passive: false });
         
+        // Event Listeners para botones
         recordBtn.addEventListener('click', toggleRecording);
         playBtn.addEventListener('click', playDrawing);
         downloadBtn.addEventListener('click', exportDrawing);
@@ -505,8 +781,8 @@
         // Evitar que se muestre el menú contextual en el canvas
         canvas.addEventListener('contextmenu', e => e.preventDefault());
         
-        // Mensaje inicial
-        statusEl.textContent = "Listo para dibujar";
+        // Inicializar la aplicación
+        document.addEventListener('DOMContentLoaded', init);
     </script>
 </body>
 </html>
